@@ -49,7 +49,12 @@ const run = async () => {
             const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
             res.send({ token, result });
         })
-        // get users 
+        // get all users 
+        app.get('/allusers', async (req, res) => {
+            const result = await usersCollection.find().toArray();
+            res.send(result);
+        })
+        // get a users 
         app.get('/users', async (req, res) => {
             const email = req.query.email;
             const filter = { email };
