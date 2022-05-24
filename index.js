@@ -1,14 +1,30 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
+const jwt = require('jsonwebtoken');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors())
 app.use(express.json());
 
+const verifyToken = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: 'UnAuthorized access' });
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden access' })
+        }
+        req.decoded = decoded;
+        next();
+    });
+}
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.1clxv.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
@@ -20,16 +36,37 @@ const run = async () => {
         const ordersCollection = client.db("orders").collection("details");
         const reviewsCollection = client.db("reviews").collection("details");
 
-        // make user
-        app.post('/login', async (req, res) => {
+        // make user and send token
+        app.put('/login', async (req, res) => {
             const user = req.body;
-            const result = await usersCollection.insertOne(user);
-            res.send(result);
+            const email = user.email;
+            const filter = { email };
+            const option = { upsert: true };
+            const updateDoc = {
+                $set: user
+            }
+            const result = await usersCollection.updateOne(filter, updateDoc, option);
+            const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+            res.send({ token, result });
         })
         // get users 
         app.get('/users', async (req, res) => {
-            const users = await usersCollection.find().toArray();
-            res.send(users);
+            const email = req.query.email;
+            const filter = { email };
+            const result = await usersCollection.findOne(filter);
+            res.send(result);
+        })
+        // update user info 
+        app.put('/users', async (req, res) => {
+            const userData = req.body;
+            const email = userData.email;
+            const filter = { email };
+            const option = { upsert: true };
+            const update = {
+                $set: userData
+            };
+            const result = await usersCollection.updateOne(filter, update, option);
+            res.send(result);
         })
         //  all parts get
         app.get('/parts', async (req, res) => {
