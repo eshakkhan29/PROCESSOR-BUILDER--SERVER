@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.STRIPE_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
@@ -35,6 +36,19 @@ const run = async () => {
         const partsCollection = client.db("processor").collection("details");
         const ordersCollection = client.db("orders").collection("details");
         const reviewsCollection = client.db("reviews").collection("details");
+        const paymentCollection = client.db("payment").collection("details")
+
+        app.post('/create-payment-intent', async (req, res) => {
+            const service = req.body;
+            const price = service.price;
+            const amount = price * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+            res.send({ clientSecret: paymentIntent.client_secret })
+        });
 
         // make user and send token
         app.put('/login', async (req, res) => {
@@ -46,7 +60,7 @@ const run = async () => {
                 $set: user
             }
             const result = await usersCollection.updateOne(filter, updateDoc, option);
-            const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+            const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '2h' })
             res.send({ token, result });
         })
         // get all users 
@@ -71,6 +85,12 @@ const run = async () => {
                 $set: userData
             };
             const result = await usersCollection.updateOne(filter, update, option);
+            res.send(result);
+        })
+        // add parts 
+        app.post('/addproduct', async (req, res) => {
+            const product = req.body;
+            const result = await partsCollection.insertOne(product);
             res.send(result);
         })
         //  all parts get
@@ -104,11 +124,39 @@ const run = async () => {
             const result = await ordersCollection.insertOne(order);
             res.send(result);
         })
-        // get orders
+        // get orders by user
         app.get('/orders', async (req, res) => {
             const email = req.query.email;
             const filter = { email }
             const result = await ordersCollection.find(filter).toArray();
+            res.send(result);
+        })
+        // get orders by id for payment
+        app.get('/orders/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await ordersCollection.findOne(filter);
+            res.send(result);
+        })
+        // update payment 
+        app.patch('/orders/:id', async (req, res) => {
+            const id = req.params.id;
+            const payment = req.body;
+            const filter = { _id: ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+
+            const result = await paymentCollection.insertOne(payment);
+            const updatedBooking = await ordersCollection.updateOne(filter, updatedDoc);
+            res.send(updatedBooking);
+        })
+        // get all orders
+        app.get('/allorders', async (req, res) => {
+            const result = await ordersCollection.find().toArray();
             res.send(result);
         })
         // delete/ cancel order 
