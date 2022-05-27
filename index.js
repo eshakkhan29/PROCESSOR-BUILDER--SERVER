@@ -95,7 +95,7 @@ const run = async () => {
         })
         //  all parts get
         app.get('/parts', async (req, res) => {
-            const parts = await partsCollection.find().toArray();
+            const parts = await partsCollection.find().limit(6).toArray();
             res.send(parts);
         })
         // parts get by id
@@ -103,6 +103,13 @@ const run = async () => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await partsCollection.findOne(query);
+            res.send(result);
+        })
+        // parts delete by id
+        app.delete('/delete-parts/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await partsCollection.deleteOne(filter);
             res.send(result);
         })
 
