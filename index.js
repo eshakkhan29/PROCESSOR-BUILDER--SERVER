@@ -98,6 +98,11 @@ const run = async () => {
             const parts = await partsCollection.find().limit(6).toArray();
             res.send(parts);
         })
+        // get all product
+        app.get('/allparts', async (req, res) => {
+            const parts = await partsCollection.find().toArray();
+            res.send(parts);
+        })
         // parts get by id
         app.get('/purchase/:id', async (req, res) => {
             const id = req.params.id;
