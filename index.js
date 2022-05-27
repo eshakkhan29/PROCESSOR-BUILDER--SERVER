@@ -38,17 +38,17 @@ const run = async () => {
         const reviewsCollection = client.db("reviews").collection("details");
         const paymentCollection = client.db("payment").collection("details")
 
-        app.post('/create-payment-intent', async (req, res) => {
-            const service = req.body;
-            const price = service.price;
-            const amount = price * 100;
-            const paymentIntent = await stripe.paymentIntents.create({
-                amount: amount,
-                currency: 'usd',
-                payment_method_types: ['card']
-            });
-            res.send({ clientSecret: paymentIntent.client_secret })
-        });
+        // app.post('/create-payment-intent', async (req, res) => {
+        //     const service = req.body;
+        //     const price = service.price;
+        //     const amount = price * 100;
+        //     const paymentIntent = await stripe.paymentIntents.create({
+        //         amount: amount,
+        //         currency: 'usd',
+        //         payment_method_types: ['card']
+        //     });
+        //     res.send({ clientSecret: paymentIntent.client_secret })
+        // });
 
         // make user and send token
         app.put('/login', async (req, res) => {
@@ -95,15 +95,6 @@ const run = async () => {
         })
         //  all parts get
         app.get('/parts', async (req, res) => {
-            const parts = await partsCollection.find().toArray();
-            res.send(parts);
-        })
-        // app.get('/parts', async (req, res) => {
-        //     const parts = await partsCollection.find().limit(6).toArray();
-        //     res.send(parts);
-        // })
-        // get all product
-        app.get('/allparts', async (req, res) => {
             const parts = await partsCollection.find().toArray();
             res.send(parts);
         })
